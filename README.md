@@ -1,11 +1,9 @@
 # libasm
 
-# 🧠 libasm
-
 **libasm** is a small educational project that reimplements a few standard C library functions — entirely in **x86-64 assembly** using **NASM** and the **Intel syntax**.  
 It’s designed to help understand how low-level operations, system calls, and calling conventions work behind the scenes.
 
-## 🧩 Overview
+## Overview
 
 This library reproduces several well-known libc functions:
 
@@ -18,11 +16,11 @@ This library reproduces several well-known libc functions:
 
 Each function is implemented in pure assembly, compiled into a static library called **`libasm.a`**.
 
-## ⚙️ Build & Run
+## Testing
+A `main.c` file is provided to test each function and compare results with the standard C library equivalents.
+
+## Build & Run
 
 ```bash
 make
 ```
-
-## 🧪 Testing
-A `main.c` file is provided to test each function and compare results with the standard C library equivalents.
