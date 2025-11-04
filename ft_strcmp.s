@@ -7,8 +7,8 @@ ft_strcmp:
     xor rax, rax
     
 .loop:
-    mov al, [rsi] ; prende primo byte all'indirizzo di memoria rsi
-    mov bl, [rdi]
+    mov al, [rdi] ; prende primo byte all'indirizzo di memoria rsi
+    mov bl, [rsi]
     cmp al, bl
     jne .finish
     test al, bl
