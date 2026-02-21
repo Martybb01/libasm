@@ -20,8 +20,8 @@ ft_strlen:
     xor rax, rax
 
 .loop:
-    mov bl, [rdi + rax]
-    cmp bl, 0
+    mov cl, [rdi + rax]
+    cmp cl, 0
     je .finish
     inc rax
     jmp .loop

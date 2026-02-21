@@ -8,9 +8,9 @@ ft_strcpy:
     mov rax, rdi        ; salva il puntatore di dst per il return
     
 .loop:
-    mov bl, [rsi]       ; carica il byte corrente da src
-    mov [rdi], bl       ; copia il byte in dst
-    test bl, bl         ; check se si è raggiungo '\0' --> jump to finish
+    mov cl, [rsi]       ; carica il byte corrente da src
+    mov [rdi], cl       ; copia il byte in dst
+    test cl, cl         ; check se si è raggiungo '\0' --> jump to finish
     je .finish
     inc rsi             
     inc rdi             

@@ -8,17 +8,17 @@ ft_strcmp:
     
 .loop:
     mov al, [rdi] ; prende primo byte all'indirizzo di memoria rsi
-    mov bl, [rsi]
-    cmp al, bl
+    mov cl, [rsi]
+    cmp al, cl
     jne .finish
-    test al, bl
+    test al, cl
     je .finish
     inc rsi
     inc rdi
     jmp .loop
 
 .finish:
-    sub al, bl
+    sub al, cl
     cmp al, 0
     jl .convert
     ret
