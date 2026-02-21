@@ -1,0 +1,550 @@
+================================================================================
+                        LIBASM - NOTE DI STUDIO
+                  Assembly x86-64 + Funzioni implementate
+================================================================================
+
+DATA: Febbraio 2026
+PROGETTO: libasm (42 School)
+ARCH: x86-64 (Intel/AMD 64-bit)
+ASSEMBLER: NASM (Netwide Assembler)
+
+================================================================================
+  PARTE 1 — TEORIA: ASSEMBLY x86-64
+================================================================================
+
+--------------------------------------------------------------------------------
+1. STRUTTURA DI UN FILE .s (NASM)
+--------------------------------------------------------------------------------
+
+Un file assembly NASM è diviso in sezioni:
+
+  section .text     → codice eseguibile
+  section .data     → dati inizializzati (stringhe, costanti)
+  section .bss      → dati non inizializzati (variabili)
+
+Dichiarazioni fondamentali:
+
+  global <nome>         → rende la funzione visibile all'esterno (come "public")
+  extern <nome>         → importa una funzione/simbolo esterno (come "extern" in C)
+
+Esempio tipico di un file:
+
+  extern malloc
+  section .text
+      global ft_strdup
+
+  ft_strdup:
+      ...
+      ret
+
+--------------------------------------------------------------------------------
+2. REGISTRI x86-64
+--------------------------------------------------------------------------------
+
+I registri sono "variabili" hardware del processore. Sono rapidissimi.
+Ogni registro ha versioni di dimensione diversa:
+
+  64-bit   32-bit   16-bit   8-bit (low)
+  -------  -------  -------  -----------
+  rax      eax      ax       al
+  rbx      ebx      bx       bl
+  rcx      ecx      cx       cl
+  rdx      edx      dx       dl
+  rsi      esi      si       sil
+  rdi      edi      di       dil
+  rsp      esp      sp       spl    ← Stack Pointer
+  rbp      ebp      bp       bpl    ← Base Pointer
+  r8..r15  r8d..    r8w..    r8b..
+
+ATTENZIONE:
+  - Quando scrivi su eax (32-bit), i 32 bit superiori di rax vengono azzerati.
+  - Quando scrivi su ax (16-bit) o al (8-bit), il resto di rax NON viene toccato.
+  Questo è importante per evitare dati residui (vedi ft_strcmp con movsx).
+
+--------------------------------------------------------------------------------
+3. CALLING CONVENTION - System V AMD64 ABI
+--------------------------------------------------------------------------------
+
+Questa è la convenzione standard su Linux x86-64.
+Definisce come passare parametri alle funzioni e dove va il valore di ritorno.
+
+PARAMETRI IN INGRESSO (in ordine):
+  1° argomento  → rdi
+  2° argomento  → rsi
+  3° argomento  → rdx
+  4° argomento  → rcx
+  5° argomento  → r8
+  6° argomento  → r9
+  (oltre 6: passati sullo stack)
+
+VALORE DI RITORNO:
+  → sempre in rax
+
+REGISTRI CALLER-SAVED (possono essere modificati dalla funzione chiamata):
+  rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11
+
+REGISTRI CALLEE-SAVED (la funzione chiamata DEVE preservarli):
+  rbx, rbp, r12, r13, r14, r15
+
+Pratica:
+  - Se chiami malloc o un'altra funzione, rdi/rsi/rax VERRANNO sovrascritti.
+  - Prima di una call, salva quello che ti serve con push; dopo la call, recupera con pop.
+
+--------------------------------------------------------------------------------
+4. ISTRUZIONI FONDAMENTALI
+--------------------------------------------------------------------------------
+
+MOVIMENTO DI DATI:
+  mov dst, src        → copia src in dst
+  xor rax, rax        → azzera rax (più efficiente di mov rax, 0)
+  push reg            → mette reg in cima allo stack; rsp -= 8
+  pop  reg            → preleva dalla cima dello stack in reg; rsp += 8
+
+ARITMETICA:
+  inc reg             → reg++
+  dec reg             → reg--
+  add dst, src        → dst += src
+  sub dst, src        → dst -= src
+  neg reg             → reg = -reg (complemento a due)
+
+LOGICA:
+  and dst, src        → AND bit a bit
+  or  dst, src        → OR bit a bit
+  test dst, src       → AND bit a bit senza salvare il risultato (aggiorna i flag)
+  cmp  dst, src       → SUB senza salvare il risultato (aggiorna i flag)
+
+SALTI (JUMPS):
+  jmp  label          → salto incondizionato
+  je   label          → jump if equal       (flag ZF=1)
+  jne  label          → jump if not equal   (flag ZF=0)
+  jz   label          → jump if zero        (uguale a je)
+  jnz  label          → jump if not zero    (uguale a jne)
+  jl   label          → jump if less        (signed, flag SF≠OF)
+  jg   label          → jump if greater     (signed)
+  jle  label          → jump if less or equal
+  jge  label          → jump if greater or equal
+
+CALL E RETURN:
+  call <funzione>     → chiama la funzione (push indirizzo di ritorno, jmp)
+  ret                 → ritorna (pop indirizzo di ritorno, jmp)
+
+ESTENSIONE DI SEGNO:
+  movsx dst, src      → copia src in dst estendendo il segno
+                        (riempe i bit superiori con il bit di segno)
+                        Es: se al = 0xFF (-1 in signed 8-bit),
+                            movsx eax, al → eax = 0xFFFFFFFF (-1 in 32-bit)
+
+--------------------------------------------------------------------------------
+5. ACCESSO ALLA MEMORIA
+--------------------------------------------------------------------------------
+
+Le parentesi quadre [ ] indicano "il valore all'indirizzo di memoria":
+
+  mov al, [rdi]           → carica il byte all'indirizzo contenuto in rdi
+  mov [rdi], al           → scrive il byte al nella locazione di memoria rdi
+  mov al, [rdi + rax]     → indirizzamento con offset (base + indice)
+
+Le dimensioni dipendono dal registro usato:
+  mov al,  [...]  → legge 1 byte
+  mov ax,  [...]  → legge 2 byte
+  mov eax, [...]  → legge 4 byte
+  mov rax, [...]  → legge 8 byte
+
+--------------------------------------------------------------------------------
+6. SYSCALL su Linux x86-64
+--------------------------------------------------------------------------------
+
+Le system call sono l'interfaccia tra il programma e il kernel.
+Si invocano con l'istruzione "syscall".
+
+CONVENZIONE PER LE SYSCALL:
+  rax  → numero della syscall
+  rdi  → 1° argomento
+  rsi  → 2° argomento
+  rdx  → 3° argomento
+  r10  → 4° argomento
+  r8   → 5° argomento
+  r9   → 6° argomento
+
+DOPO LA SYSCALL:
+  rax  → valore di ritorno
+         Se negativo: è un codice di errore (-errno)
+         Se positivo/zero: successo
+
+SYSCALL PRINCIPALI USATE IN LIBASM:
+  Numero  Nome     Descrizione
+  ------  -------  ----------------------------
+  0       read     legge da un file descriptor
+  1       write    scrive su un file descriptor
+
+Quindi:
+  mov rax, 1    → preparo "write"
+  syscall       → eseguo
+
+--------------------------------------------------------------------------------
+7. GESTIONE DEGLI ERRORI CON errno
+--------------------------------------------------------------------------------
+
+In C, quando una funzione fallisce imposta la variabile globale "errno".
+In assembly, "errno" non è una semplice variabile globale (è thread-local).
+Per accedervi bisogna chiamare la funzione:
+
+  __errno_location()  → ritorna in rax il PUNTATORE a errno
+
+Flusso per gestire un errore:
+
+  1. syscall ritorna un valore negativo in rax
+  2. neg rax            → rax ora contiene il codice di errore positivo
+  3. mov rdi, rax       → salvo il codice di errore in rdi
+  4. call __errno_location wrt ..plt   → rax = puntatore a errno
+  5. mov [rax], rdi     → scrivo il codice di errore in *errno
+  6. mov rax, -1        → ritorno -1 (come da convenzione C)
+  7. ret
+
+"wrt ..plt" è necessario per la compatibilità PIE (Position Independent Executable).
+Serve quando si chiamano funzioni di libreria esterne in codice compilato con -pie.
+
+--------------------------------------------------------------------------------
+8. LO STACK E I REGISTRI VOLATILI
+--------------------------------------------------------------------------------
+
+Lo stack cresce verso il basso (indirizzi decrescenti).
+  push rdi  → rsp -= 8; mem[rsp] = rdi
+  pop  rdi  → rdi = mem[rsp]; rsp += 8
+
+REGOLA IMPORTANTE:
+  Prima di chiamare una funzione esterna (call malloc, call ft_strlen ecc.),
+  i registri rdi, rsi, rax, rcx, rdx ecc. POSSONO essere distrutti dalla funzione.
+  Se hai un valore importante in uno di questi, salvatelo prima con push!
+
+Esempio da ft_strdup:
+  push rdi          ← salvo il puntatore alla stringa originale
+  call ft_strlen    ← distrugge rdi, rsi, rax
+  ...
+  call malloc       ← distrugge di nuovo tutto
+  pop rsi           ← recupero il puntatore salvato
+
+================================================================================
+  PARTE 2 — FUNZIONI IMPLEMENTATE
+================================================================================
+
+--------------------------------------------------------------------------------
+A. ft_strlen
+--------------------------------------------------------------------------------
+
+PROTOTIPO C:  size_t ft_strlen(const char *s);
+FILE:         ft_strlen.s
+
+LOGICA:
+  Itera sulla stringa carattere per carattere finché non trova '\0'.
+  Usa rax come contatore (che è anche il valore di ritorno).
+
+PARAMETRI:
+  rdi = puntatore alla stringa
+
+REGISTRI USATI:
+  rax = contatore / valore di ritorno
+  cl  = byte corrente (parte bassa di rcx)
+
+CODICE ANNOTATO:
+  ft_strlen:
+      xor rax, rax          ← azzera il contatore (rax = 0)
+
+  .loop:
+      mov cl, [rdi + rax]   ← carica il byte alla posizione (str + i) in cl
+      cmp cl, 0             ← confronta con '\0'
+      je .finish            ← se uguale a 0, fine
+      inc rax               ← i++
+      jmp .loop             ← prossima iterazione
+
+  .finish:
+      ret                   ← ritorna rax (la lunghezza)
+
+CASO LIMITE: stringa vuota "" → il primo byte è già '\0', ritorna 0 subito.
+
+--------------------------------------------------------------------------------
+B. ft_strcpy
+--------------------------------------------------------------------------------
+
+PROTOTIPO C:  char *ft_strcpy(char *dst, const char *src);
+FILE:         ft_strcpy.s
+
+LOGICA:
+  Copia byte per byte da src a dst finché non trova '\0' (compreso).
+  Ritorna il puntatore originale a dst.
+
+PARAMETRI:
+  rdi = puntatore a dst (destinazione)
+  rsi = puntatore a src (sorgente)
+
+REGISTRI USATI:
+  rax = copia del puntatore originale a dst (valore di ritorno)
+  cl  = byte corrente
+
+CODICE ANNOTATO:
+  ft_strcpy:
+      mov rax, rdi          ← salvo il puntatore originale a dst (lo ritorno alla fine)
+
+  .loop:
+      mov cl, [rsi]         ← carica il byte corrente da src
+      mov [rdi], cl         ← copia il byte in dst
+      test cl, cl           ← controlla se cl == 0 (test fa AND, aggiorna ZF)
+      je .finish            ← se è '\0', siamo finiti (l'abbiamo già copiato)
+      inc rsi               ← src++
+      inc rdi               ← dst++
+      jmp .loop
+
+  .finish:
+      ret                   ← ritorna rax = puntatore originale a dst
+
+NOTA: test cl, cl è equivalente a "cmp cl, 0" ma più compatto.
+      Il '\0' finale viene copiato, poi si esce: comportamento corretto.
+
+--------------------------------------------------------------------------------
+C. ft_strcmp
+--------------------------------------------------------------------------------
+
+PROTOTIPO C:  int ft_strcmp(const char *s1, const char *s2);
+FILE:         ft_strcmp.s
+
+LOGICA:
+  Confronta le due stringhe carattere per carattere.
+  Si ferma quando trova caratteri diversi oppure quando entrambi sono '\0'.
+  Ritorna: s1[i] - s2[i] (negativo se s1 < s2, 0 se uguali, positivo se s1 > s2)
+
+PARAMETRI:
+  rdi = puntatore a s1
+  rsi = puntatore a s2
+
+REGISTRI USATI:
+  rax / al = byte corrente di s1 + valore di ritorno
+  cl       = byte corrente di s2
+
+CODICE ANNOTATO:
+  ft_strcmp:
+      xor rax, rax          ← azzera rax (per sicurezza)
+
+  .loop:
+      mov al, [rdi]         ← carica byte di s1
+      mov cl, [rsi]         ← carica byte di s2
+      cmp al, cl            ← confronta i due byte
+      jne .finish           ← se sono diversi, esci (calcoliamo la differenza)
+      test al, cl           ← se al == cl == 0, entrambi sono '\0'
+      je .finish            ← fine stringa: le stringhe sono uguali
+      inc rsi
+      inc rdi
+      jmp .loop
+
+  .finish:
+      sub al, cl            ← al = s1[i] - s2[i]
+      cmp al, 0
+      jl .convert           ← se il risultato è negativo, dobbiamo estendere il segno
+      ret                   ← se 0 o positivo, rax è già ok
+
+  .convert:
+      movsx eax, al         ← sign-extend: al (8-bit) → eax (32-bit)
+      ret
+
+PERCHE' movsx?
+  al è un registro a 8 bit. Se s1[i] - s2[i] è negativo (es. -1 = 0xFF),
+  il byte alto di rax/eax potrebbe contenere dati residui da operazioni precedenti.
+  movsx eax, al copia al in eax estendendo il bit di segno su tutti i 32 bit,
+  garantendo che il valore negativo sia corretto come intero a 32 bit.
+
+POSIX specifica solo il SEGNO del risultato (< 0, 0, > 0), non il valore esatto.
+Il test nel main.c verifica il segno, non il valore assoluto.
+
+--------------------------------------------------------------------------------
+D. ft_write
+--------------------------------------------------------------------------------
+
+PROTOTIPO C:  ssize_t ft_write(int fildes, const void *buf, size_t nbyte);
+FILE:         ft_write.s
+
+LOGICA:
+  Chiama la syscall write (numero 1).
+  Se ritorna un errore (rax < 0), imposta errno e ritorna -1.
+
+PARAMETRI (già nelle giuste posizioni per la syscall!):
+  rdi = fildes (file descriptor)
+  rsi = buf    (puntatore al buffer)
+  rdx = nbyte  (numero di byte)
+
+REGISTRI USATI:
+  rax = numero syscall (1) poi valore di ritorno
+
+CODICE ANNOTATO:
+  extern __errno_location
+
+  ft_write:
+      mov rax, 1            ← numero della syscall write
+      syscall               ← esegui; rax = bytes scritti, o -errno se errore
+
+      cmp rax, 0
+      jl .error             ← se rax < 0, c'è stato un errore
+      ret                   ← altrimenti ritorna i bytes scritti
+
+  .error:
+      neg rax               ← rax era -errno, ora è +errno (il codice di errore)
+      mov rdi, rax          ← salvo il codice errore in rdi
+      call __errno_location wrt ..plt   ← rax = puntatore a errno
+      mov [rax], rdi        ← *errno = codice_errore
+      mov rax, -1           ← valore di ritorno: -1 (come write() in C)
+      ret
+
+NOTA IMPORTANTE: i parametri (rdi, rsi, rdx) per la syscall write coincidono
+esattamente con i parametri della funzione C. Non serve spostarli!
+Basta mettere 1 in rax e chiamare syscall.
+
+--------------------------------------------------------------------------------
+E. ft_read
+--------------------------------------------------------------------------------
+
+PROTOTIPO C:  ssize_t ft_read(int fildes, void *buf, size_t nbyte);
+FILE:         ft_read.s
+
+LOGICA:
+  Identica a ft_write ma con la syscall read (numero 0).
+
+PARAMETRI:
+  rdi = fildes
+  rsi = buf
+  rdx = nbyte
+
+CODICE ANNOTATO:
+  extern __errno_location
+
+  ft_read:
+      mov rax, 0            ← numero della syscall read
+      syscall
+
+      cmp rax, 0
+      jl .error
+      ret
+
+  .error:
+      neg rax
+      mov rdi, rax
+      call __errno_location wrt ..plt
+      mov [rax], rdi
+      mov rax, -1
+      ret
+
+La struttura è speculare a ft_write. La differenza è solo nel numero della syscall:
+  0 = read
+  1 = write
+
+--------------------------------------------------------------------------------
+F. ft_strdup
+--------------------------------------------------------------------------------
+
+PROTOTIPO C:  char *ft_strdup(const char *s1);
+FILE:         ft_strdup.s
+
+LOGICA:
+  1. Salva il puntatore a s1 nello stack (push rdi)
+  2. Calcola la lunghezza di s1 con ft_strlen
+  3. Alloca lunghezza+1 bytes con malloc (il +1 è per il '\0')
+  4. Recupera il puntatore originale a s1 dallo stack (pop rsi)
+  5. Chiama ft_strcpy per copiare s1 nella nuova memoria
+  6. Ritorna il puntatore alla copia
+
+PARAMETRI:
+  rdi = puntatore alla stringa da duplicare
+
+REGISTRI USATI:
+  rax = valore di ritorno di ft_strlen, poi di malloc, poi di ft_strcpy (= dst)
+  rdi = parametro per ft_strlen, poi per malloc (size), poi per ft_strcpy (dst)
+  rsi = recuperato dallo stack, usato come src per ft_strcpy
+
+CODICE ANNOTATO:
+  extern malloc
+  extern __errno_location
+  extern ft_strlen
+  extern ft_strcpy
+
+  ft_strdup:
+      xor rax, rax          ← azzera rax
+
+      push rdi              ← salvo il puntatore a s1 (malloc lo distruggerà)
+      call ft_strlen        ← rax = lunghezza di s1 (rdi ancora valido)
+      inc rax               ← rax++ per includere il '\0'
+      mov rdi, rax          ← rdi = size da allocare (parametro per malloc)
+      call malloc wrt ..plt ← rax = puntatore alla nuova memoria (NULL se fallisce)
+
+      test rax, rax         ← controlla se malloc ha ritornato NULL
+      jz .error             ← se NULL, vai a gestire l'errore
+
+      pop rsi               ← recupero il puntatore originale a s1 in rsi
+      mov rdi, rax          ← rdi = dst (nuova memoria); ft_strcpy(rdi, rsi)
+      call ft_strcpy        ← rax = dst (puntatore alla copia)
+      ret                   ← ritorna rax = puntatore alla stringa duplicata
+
+  .error:
+      pop rsi               ← bilancio lo stack (il push deve avere il suo pop!)
+      mov rdi, 12           ← 12 = ENOMEM (errno per "out of memory")
+      call __errno_location wrt ..plt
+      mov [rax], rdi        ← *errno = ENOMEM
+      xor rax, rax          ← ritorna NULL (come strdup in caso di errore)
+      ret
+
+PUNTI CRITICI:
+  - Il push/pop deve sempre essere bilanciato, anche nel percorso di errore.
+  - Dopo call ft_strlen, rax = lunghezza; rdi è ancora il puntatore originale
+    perché ft_strlen non lo modifica (usa solo rax e cl).
+  - Dopo call malloc, rdi è stato usato come parametro quindi è perso.
+    Per questo avevamo salvato il puntatore con push prima.
+  - ft_strcpy ritorna in rax il puntatore a dst, che è quello che vogliamo.
+    Quindi possiamo fare ret direttamente dopo ft_strcpy.
+
+================================================================================
+  PARTE 4 — TRUCCHI E INSIDIE COMUNI
+================================================================================
+
+1. xor rax, rax VS mov rax, 0
+   → Entrambi azzerano rax. xor è più corto in opcode ed è idiomatico.
+
+2. test cl, cl VS cmp cl, 0
+   → Identici per il controllo dello zero. test è più compatto.
+
+3. Dati residui nei registri
+   → Se usi al (8-bit) come return value ma rax ha dati nei byte alti,
+     il chiamante vedrà un valore sbagliato. Usa xor rax, rax prima
+     o movsx/movzx per estendere correttamente.
+
+4. Stack misalignment
+   → La ABI richiede che rsp sia allineato a 16 byte prima di una call.
+     Una call inserisce 8 byte nello stack (indirizzo di ritorno).
+     Se hai fatto un numero dispari di push senza pop, lo stack non è allineato.
+     Alcune funzioni (come malloc) dipendono dall'allineamento.
+
+5. Chiamate a funzioni esterne distruggono rdi/rsi/rax
+   → Prima di call: salva con push quello che ti serve.
+     Dopo call: recupera con pop.
+
+6. Differenza tra ret e jmp
+   → ret usa l'indirizzo sullo stack; jmp va direttamente all'etichetta.
+     Non usare jmp per tornare da una funzione.
+
+7. L'etichetta .finish dentro ft_strcmp
+   → Il codice arriva a .finish sia quando i byte sono diversi
+     sia quando entrambi sono '\0'. In entrambi i casi, sub al, cl
+     dà il risultato corretto:
+     - byte diversi: al - cl = differenza non zero
+     - fine stringa: 0 - 0 = 0 (stringhe uguali)
+
+================================================================================
+  PARTE 5 — RIFERIMENTO RAPIDO SYSCALL
+================================================================================
+
+  rax  Nome     Arg1(rdi)  Arg2(rsi)   Arg3(rdx)   Ritorna
+  ---  -------  ---------  ----------  ----------  ----------------------
+  0    read     fd         buf         count       bytes letti / -errno
+  1    write    fd         buf         count       bytes scritti / -errno
+  2    open     pathname   flags       mode        fd / -errno
+  3    close    fd         -           -           0 / -errno
+  9    mmap     addr       length      prot        ptr / -errno
+  60   exit     status     -           -           (non ritorna)
+
+================================================================================
+
