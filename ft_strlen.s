@@ -1,31 +1,30 @@
 section .text
     global ft_strlen
 
-; mov si usa x copiare il secondo valore dichiarato nel primo
-; prima cosa svuotare il rax x sicurezza con mov rax, 0 o xor che prende due registri da svuotare
-; rax sarà il nostro iteratore
-; [] --> indirizzo di memoria
-; je --> jump if equal
-; jle --> jump if less or equal
-; jme --> jump if more or equal
-; jmp --> jump / goto
-; jne --> jump if not equal
-; jz --> jump if zero
-; il valore ritornato sarà sempre rax (quindi ret contiene rax)
-; test comando x vedere se la stringa è nulla
-; x compila --> nasm -f elf64 -g
-; x testare --> creare un main su file .c e dichiarare la funzione external ft_strlen
+; ============================================================
+; ft_strlen - Calcola la lunghezza di una stringa
+; ============================================================
+; PARAMETRI:
+;   rdi = puntatore alla stringa (char *)
+; RITORNA:
+;   rax = numero di caratteri della stringa (escluso il '\0' finale)
+; LOGICA:
+;   Scorre la stringa byte per byte usando rax come indice,
+;   finché non trova il carattere null '\0' che segnala la fine.
+;   REGISTRI USATI:
+;   rax = contatore / valore di ritorno
+;   cl  = byte corrente (parte bassa di rcx)
+; ============================================================
 
 ft_strlen:
-    xor rax, rax
+    xor rax, rax            ; azzera rax: lo usiamo come contatore/indice (index = 0)
 
 .loop:
-    mov cl, [rdi + rax]
-    cmp cl, 0
-    je .finish
-    inc rax
-    jmp .loop
+    mov cl, [rdi + rax]     ; carica il byte all'indirizzo (rdi + rax) → carattere corrente
+    cmp cl, 0               ; confronta il byte con 0 (carattere null '\0')
+    je .finish              ; se è zero → fine della stringa, salta a finish
+    inc rax                 ; i++
+    jmp .loop               ; torna all'inizio del loop
 
 .finish:
-    ret
-
+    ret                     ; ritorna rax (= lunghezza della stringa)
