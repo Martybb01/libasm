@@ -10,10 +10,6 @@ section .text
 
 ft_strcpy:
     mov rax, rdi            ; salva dst originale (valore di ritorno)
-    test rsi, rsi           ; src NULL → no-op
-    jz .done
-    test rdi, rdi           ; dst NULL → no-op
-    jz .done
 
 .loop:
     mov cl, [rsi]

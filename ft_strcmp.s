@@ -11,10 +11,6 @@ section .text
 
 ft_strcmp:
     xor rax, rax
-    test rdi, rdi           ; NULL guard (UB in C, difensivo)
-    jz .done
-    test rsi, rsi
-    jz .done
 
 .loop:
     movzx eax, byte [rdi]   ; carica byte s1[i] come unsigned (zero-extend)

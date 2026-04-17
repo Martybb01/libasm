@@ -9,8 +9,6 @@ section .text
 
 ft_strlen:
     xor rax, rax
-    test rdi, rdi           ; NULL → ritorna 0
-    jz .done
 
 .loop:
     mov cl, [rdi + rax]
