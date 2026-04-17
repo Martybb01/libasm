@@ -32,4 +32,16 @@ fclean: clean
 
 re: fclean all
 
+test-%: all
+	@echo "Building stress test suite..."
+	@gcc -Wall -Wextra -Werror tests/$*.test.c -L. -lasm -o $*_test
+	@./$*_test
+	@rm -f $*_test
+
+valtest-%: all
+	@echo "Building valgrind test for $*..."
+	@gcc -Wall -Wextra -Werror tests/$*.test.c -L. -lasm -o $*_test
+	@valgrind --leak-check=full ./$*_test
+	@rm -f $*_test
+
 .PHONY: all clean fclean re test
