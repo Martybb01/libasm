@@ -1,38 +1,28 @@
 section .text
     global ft_strcpy
 
-; ============================================================
-; ft_strcpy - Copia una stringa nella destinazione
-; ============================================================
-; PARAMETRI:
-;   rdi = puntatore alla stringa destinazione (dst)
-;   rsi = puntatore alla stringa sorgente (src)
-; RITORNA:
-;   rax = puntatore originale a dst (come da standard C)
-; LOGICA:
-;   Copia byte per byte da src a dst, incluso il '\0' finale.
-;   Salva subito il puntatore dst in rax perché rdi viene
-;   modificato durante il loop.
-; REGISTRI USATI:
-;  rax = copia del puntatore originale a dst (valore di ritorno)
-;  cl  = byte corrente
-; ============================================================
+; ── ft_strcpy ────────────────────────────────────────
+; firma:    ft_strcpy(char *dst, const char *src) → char *dst
+; logica:   copia src in dst byte per byte, incluso '\0'. src/dst NULL → no-op.
+; registri: rdi = dst (avanza nel loop), rsi = src (avanza), rax = dst originale, cl = byte corrente
+; nota:     rax = dst salvato subito perché rdi viene modificato nel loop
+; ─────────────────────────────────────────────────────
 
 ft_strcpy:
-    mov rax, rdi            ; salva il puntatore originale di dst in rax (sarà il valore di ritorno)
-    test rsi, rsi           ; controlla se src è NULL
-    jz .finish              ; se src è NULL → niente da copiare, ritorna dst
-    test rdi, rdi
-    jz .finish
+    mov rax, rdi            ; salva dst originale (valore di ritorno)
+    test rsi, rsi           ; src NULL → no-op
+    jz .done
+    test rdi, rdi           ; dst NULL → no-op
+    jz .done
 
 .loop:
-    mov cl, [rsi]           ; carica il byte corrente da src in cl
-    mov [rdi], cl           ; copia quel byte nella posizione corrente di dst
-    test cl, cl             ; testa se cl è zero (carattere null '\0')
-    je .finish              ; se è zero → stringa terminata, salta a finish
-    inc rsi                 ; avanza il puntatore src al prossimo carattere
-    inc rdi                 ; avanza il puntatore dst al prossimo carattere
-    jmp .loop               ; torna all'inizio del loop
+    mov cl, [rsi]
+    mov [rdi], cl
+    test cl, cl             ; '\0' copiato → fine stringa
+    je .done
+    inc rsi
+    inc rdi
+    jmp .loop
 
-.finish:
-    ret                     ; ritorna rax (puntatore originale a dst, salvato all'inizio)
+.done:
+    ret
