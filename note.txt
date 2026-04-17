@@ -7,6 +7,7 @@ DATA: Marzo 2026
 PROGETTO: libasm (42 School)
 ARCH: x86-64 (Intel/AMD 64-bit)
 ASSEMBLER: NASM (Netwide Assembler)
+https://www.cs.uaf.edu/2017/fall/cs301/lecture/09_11_registers.html
 
 ================================================================================
   PARTE 1 — TEORIA: ASSEMBLY x86-64
