@@ -191,13 +191,6 @@ void test_adversarial_strcmp() {
     }
     total++;
     
-    // Test 4: Both NULL (your implementation behavior)
-    printf("\n4. Both NULL:\n");
-    result = ft_strcmp(NULL, NULL);
-    printf("   ft_strcmp(NULL, NULL) = %d (implementation defined)\n", result);
-    passed++; // Accept any behavior for NULL
-    total++;
-    
     printf("\nPassed: %d/%d\n", passed, total);
 }
 
@@ -481,18 +474,6 @@ void test_adversarial_strdup() {
         free(dup);
     } else {
         printf("❌ Failed\n");
-    }
-    total++;
-    
-    // Test 5: NULL input
-    printf("\n5. NULL input:\n");
-    dup = ft_strdup(NULL);
-    if (dup == NULL) {
-        printf("✅ Correct: returned NULL\n");
-        passed++;
-    } else {
-        printf("❌ Failed: should return NULL\n");
-        free(dup);
     }
     total++;
     

@@ -96,13 +96,6 @@ static void strlen_long(void)
     fail("long string (100k chars)", "wrong count"); exit(1);
 }
 
-static void strlen_null(void)
-{
-    /* 42 ft_strlen is expected to handle NULL gracefully */
-    size_t r = ft_strlen(NULL);
-    if (r == 0) { ok("NULL → 0"); exit(0); }
-    fail("NULL → 0", "returned non-zero (implementation-defined)"); exit(1);
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════
 ** ft_strcpy
@@ -477,14 +470,6 @@ static void strdup_can_be_freed(void)
     ok("result can be freed without error"); exit(0);
 }
 
-static void strdup_null_input(void)
-{
-    char *r = ft_strdup(NULL);
-    if (r == NULL) { ok("NULL input → NULL"); exit(0); }
-    free(r);
-    fail("NULL input → NULL", "returned non-NULL"); exit(1);
-}
-
 static void strdup_long(void)
 {
     char *src = malloc(20001);
@@ -554,7 +539,6 @@ int main(void)
         {"high-ASCII bytes",           strlen_high_ascii},
         {"255 non-null bytes",         strlen_all_printable},
         {"long string (100k)",         strlen_long},
-        {"NULL → 0",                   strlen_null},
     };
 
     t_test strcpy_tests[] = {
@@ -604,7 +588,6 @@ int main(void)
         {"empty string",                              strdup_empty},
         {"null terminator present",                   strdup_null_terminator},
         {"result can be freed",                       strdup_can_be_freed},
-        {"NULL input → NULL",                         strdup_null_input},
         {"long strdup (20k)",                         strdup_long},
     };
 

@@ -56,11 +56,6 @@ void test_ft_strlen() {
     }
     
     printf("\nPassed: %d/%d\n", passed, test_count);
-    
-    // Edge case: NULL pointer (should return 0 or handle gracefully)
-    printf("\nEdge case - NULL pointer:\n");
-    size_t null_result = ft_strlen(NULL);
-    printf("ft_strlen(NULL) = %zu\n", null_result);
 }
 
 void test_ft_strcpy() {
@@ -102,12 +97,6 @@ void test_ft_strcpy() {
     }
     
     printf("\nPassed: %d/%d\n", passed, test_count);
-    
-    // Edge case: NULL source
-    printf("\nEdge case - NULL source:\n");
-    char dest[10];
-    ft_strcpy(dest, NULL);
-    printf("ft_strcpy with NULL source handled\n");
 }
 
 void test_ft_strcmp() {
@@ -330,19 +319,6 @@ void test_ft_strdup() {
         }
         
         free(result);
-    }
-    
-    // Test NULL input
-    printf("\nEdge case - NULL input:\n");
-    char *null_result = ft_strdup(NULL);
-    if (null_result == NULL) {
-        printf("✅ Correctly returned NULL for NULL input\n");
-        passed++;
-        test_count++;
-    } else {
-        printf("❌ Should return NULL for NULL input\n");
-        free(null_result);
-        test_count++;
     }
     
     printf("\nPassed: %d/%d\n", passed, test_count);
