@@ -20,6 +20,10 @@ section .text
 
 ft_strcpy:
     mov rax, rdi            ; salva il puntatore originale di dst in rax (sarà il valore di ritorno)
+    test rsi, rsi           ; controlla se src è NULL
+    jz .finish              ; se src è NULL → niente da copiare, ritorna dst
+    test rdi, rdi
+    jz .finish
 
 .loop:
     mov cl, [rsi]           ; carica il byte corrente da src in cl

@@ -17,7 +17,9 @@ section .text
 ; ============================================================
 
 ft_strlen:
-    xor rax, rax            ; azzera rax: lo usiamo come contatore/indice (index = 0)
+    xor rax, rax        ; azzera rax: lo usiamo come contatore/indice (index = 0)
+    test rdi, rdi
+    jz .finish
 
 .loop:
     mov cl, [rdi + rax]     ; carica il byte all'indirizzo (rdi + rax) → carattere corrente

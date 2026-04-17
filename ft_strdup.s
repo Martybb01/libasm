@@ -30,23 +30,26 @@ section .text
 ; ============================================================
 
 ft_strdup:
-    xor rax, rax                    ; azzera rax per sicurezza
+    test rdi, rdi                   ; controlla se src è NULL
+    jz .error                       ; se NULL → errore senza pop (push non ancora eseguito)
     push rdi                        ; salva rdi sullo stack: ft_strlen lo sovrascriverà
     call ft_strlen                  ; calcola la lunghezza della stringa → risultato in rax
     inc rax                         ; +1 per includere il carattere null '\0' nell'allocazione
     mov rdi, rax                    ; sposta la dimensione in rdi (parametro di malloc)
     call malloc wrt ..plt           ; alloca la memoria (wrt ..plt = PIE compliant)
     test rax, rax                   ; testa se malloc ha ritornato NULL (allocazione fallita)
-    jz .error                       ; se NULL → salta alla gestione dell'errore
+    jz .error_pop                   ; se NULL → salta alla gestione dell'errore (bilancia il push)
     pop rsi                         ; recupera il puntatore originale della stringa in rsi (src per ft_strcpy)
     mov rdi, rax                    ; sposta il puntatore del nuovo buffer in rdi (dst per ft_strcpy)
     call ft_strcpy                  ; copia la stringa originale (rsi) nel nuovo buffer (rdi)
     ret                             ; ritorna rax (ft_strcpy ritorna il puntatore dst = nuova stringa)
 
-.error:
+.error_pop:
     pop rsi                         ; ripristina lo stack (bilancia il push iniziale)
+
+.error:
     mov rdi, 12                     ; carica 12 in rdi: ENOMEM = errore "memoria esaurita"
     call __errno_location wrt ..plt ; ottieni il puntatore alla variabile errno → rax
     mov [rax], rdi                  ; scrive il valore di errno (12 = ENOMEM) all'indirizzo puntato da rax
-    xor rax, rax                    ; azzera rax: malloc ritorna NULL in caso di errore
+    xor rax, rax                    ; azzera rax: ritorna NULL in caso di errore
     ret                             ; ritorna NULL (0)

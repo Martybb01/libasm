@@ -25,24 +25,22 @@ section .text
 
 ft_strcmp:
     xor rax, rax            ; azzera rax (conterrà il risultato finale)
+    test rsi, rsi
+    jz .finish
+    test rdi, rdi
+    jz .finish
 
 .loop:
-    mov al, [rdi]           ; carica il byte corrente di s1 in al (parte bassa di rax)
-    mov cl, [rsi]           ; carica il byte corrente di s2 in cl
+    movzx eax, byte [rdi]   ; carica s1[i] come unsigned in eax (zero-extend, evita signed overflow)
+    movzx ecx, byte [rsi]   ; carica s2[i] come unsigned in ecx
     cmp al, cl              ; confronta i due byte
     jne .finish             ; se sono diversi → abbiamo il risultato, salta a finish
-    test al, cl             ; testa se entrambi i byte sono zero (fine di entrambe le stringhe)
+    test al, al             ; testa se il byte è zero (fine stringa; al == cl qui)
     je .finish              ; se sì → stringhe identiche, salta a finish
     inc rdi                 ; avanza il puntatore di s1
     inc rsi                 ; avanza il puntatore di s2
     jmp .loop               ; torna all'inizio del loop
 
 .finish:
-    sub al, cl              ; calcola la differenza: al - cl (risultato del confronto)
-    cmp al, 0               ; controlla se il risultato è negativo
-    jl .convert             ; se negativo → serve estensione del segno, salta a convert
-    ret                     ; altrimenti rax è già corretto, ritorna
-
-.convert:
-    movsx eax, al           ; estende il segno di al (8 bit) a eax (32 bit) per i valori negativi
-    ret                     ; ritorna rax con il valore negativo correttamente rappresentato
+    sub eax, ecx            ; differenza unsigned: \xFF(255) - \x01(1) = 254 (positivo, corretto)
+    ret
